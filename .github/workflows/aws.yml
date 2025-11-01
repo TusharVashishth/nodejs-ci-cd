@@ -30,6 +30,7 @@ jobs:
         run: |
           mkdir -p deploy
           cp -r dist deploy/
+          cp -r src deploy/
           cp package*.json deploy/
           cp ecosystem.config.cjs deploy/
           # Copy .env.example if exists
@@ -74,10 +75,11 @@ jobs:
             
             # Navigate to app directory
             cd /var/www/express-app
-            
+
             # Fix ownership first (important!)
             echo "Fixing directory ownership..."
             sudo chown -R $USER:$USER /var/www/express-app
+            
             
             # Backup current version
             if [ -d "dist" ]; then
@@ -90,9 +92,9 @@ jobs:
             
             # Extract new version (this will overwrite existing files)
             echo "Extracting new deployment package..."
-            tar -xzf /tmp/deploy.tar.gz -C /var/www/express-app
+            tar --overwrite -xzf /tmp/deploy.tar.gz -C /var/www/express-app
             rm /tmp/deploy.tar.gz
-            
+
             # Fix ownership after extraction
             sudo chown -R $USER:$USER /var/www/express-app
             
