@@ -75,6 +75,10 @@ jobs:
             # Navigate to app directory
             cd /var/www/express-app
             
+            # Fix ownership first (important!)
+            echo "Fixing directory ownership..."
+            sudo chown -R $USER:$USER /var/www/express-app
+            
             # Backup current version
             if [ -d "dist" ]; then
               timestamp=$(date +%Y%m%d_%H%M%S)
@@ -88,6 +92,9 @@ jobs:
             echo "Extracting new deployment package..."
             tar -xzf /tmp/deploy.tar.gz -C /var/www/express-app
             rm /tmp/deploy.tar.gz
+            
+            # Fix ownership after extraction
+            sudo chown -R $USER:$USER /var/www/express-app
             
             echo "=== Deployment Package Contents ==="
             ls -la /var/www/express-app/
