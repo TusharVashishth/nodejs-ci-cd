@@ -42,7 +42,7 @@ jobs:
         with:
           name: deployment-package
           path: deploy.tar.gz
-          retention-days: 7
+          retention-days: 1
 
   deploy:
     name: Deploy to EC2
@@ -117,25 +117,15 @@ jobs:
             # Zero-downtime reload with PM2
             if pm2 describe express-app > /dev/null 2>&1; then
               echo "Reloading PM2 app (zero-downtime)..."
-              pm2 reload ecosystem.config.cjs --update-env
+              sudo pm2 reload ecosystem.config.cjs --update-env
             else
               echo "Starting new PM2 process..."
-              pm2 start ecosystem.config.cjs
+              sudo pm2 start ecosystem.config.cjs
             fi
             
             # Save PM2 process list
-            pm2 save
-            
-            # Show PM2 status and logs
-            echo "=== PM2 Status ==="
-            pm2 list
-            echo "=== Recent Logs ==="
-            pm2 logs express-app --lines 30 --nostream
-            
-            # Verify the dist folder was updated
-            echo "=== Deployment Verification ==="
-            echo "Dist folder last modified:"
-            ls -la dist/ | head -5
+            sudo pm2 save
+           
           EOF
 
           # Cleanup

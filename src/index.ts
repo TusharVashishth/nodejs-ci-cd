@@ -36,6 +36,26 @@ app.get("/random-age", (req: Request, res: Response) => {
   return res.json({ status: "success", message: `Your random age is ${randomAge}` });
 });
 
+app.get("/random-user", (req: Request, res: Response) => {
+  const firstNames: string[] = ["John", "Jane", "Peter", "Susan", "Mike", "Chris", "Patt", "Tom", "Harry"];
+  const lastNames: string[] = ["Doe", "Smith", "Jones", "Williams", "Brown", "Rock", "Loe", "Potter", "Helsinki"];
+
+  const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+  const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+  const name = `${randomFirstName} ${randomLastName}`;
+  const email = `${randomFirstName.toLowerCase()}.${randomLastName.toLowerCase()}@example.com`;
+  const age = Math.floor(Math.random() * 50) + 20; // Age between 20 and 69
+
+  return res.json({
+    status: "success",
+    user: {
+      name,
+      email,
+      age,
+    },
+  });
+});
+
 app.listen(PORT, () => console.log(`Server is running on PORT ${PORT}`));
 
 
