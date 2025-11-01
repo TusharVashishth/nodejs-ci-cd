@@ -84,21 +84,26 @@ jobs:
               ls -t backups/backup_*.tar.gz 2>/dev/null | tail -n +6 | xargs -r rm
             fi
             
-            # Stop PM2 process before update (important!)
-            echo "Stopping PM2 process if running..."
-            pm2 stop express-app 2>/dev/null || echo "No PM2 process to stop"
-            pm2 delete express-app 2>/dev/null || echo "No PM2 process to delete"
-            
             # Extract new version (this will overwrite existing files)
             echo "Extracting new deployment package..."
             tar -xzf /tmp/deploy.tar.gz -C /var/www/express-app
             rm /tmp/deploy.tar.gz
             
+            echo "=== Deployment Package Contents ==="
+            ls -la /var/www/express-app/
+            echo ""
+            echo "=== Dist Directory Contents ==="
+            ls -la /var/www/express-app/dist/
+            echo ""
+            echo "=== First 20 lines of index.js ==="
+            head -20 /var/www/express-app/dist/index.js
+            
             # Install production dependencies on the server
+            echo ""
             echo "Installing production dependencies..."
             npm ci --only=production
             
-            # Create .env file if needed
+            # Create .env file if needed (only on first deploy)
             if [ ! -f .env ]; then
               echo "Creating default .env file..."
               echo "NODE_ENV=production" > .env
@@ -108,11 +113,14 @@ jobs:
             # Create logs directory
             mkdir -p logs
             
-            # Start fresh PM2 process
-            echo "Starting PM2 process..."
-            pm2 start ecosystem.config.cjs
-            pm2 startup
-            pm2 save --force
+            # Zero-downtime reload with PM2
+            if pm2 list | grep -q "express-app"; then
+              echo "Reloading PM2 app (zero-downtime)..."
+              pm2 reload ecosystem.config.cjs --update-env
+            else
+              echo "Starting new PM2 process..."
+              pm2 start ecosystem.config.cjs
+            fi
             
             # Save PM2 process list
             pm2 save
@@ -137,12 +145,12 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
         run: |
           echo "Waiting for application to start..."
-          sleep 15
+          sleep 10
 
-          # Check if app responds (try multiple times)
+          # Check if app responds via nginx (try multiple times)
           for i in {1..5}; do
             echo "Attempt $i of 5..."
-            response=$(curl -s -o /dev/null -w "%{http_code}" http://${EC2_HOST}:8000 2>/dev/null || echo "000")
+            response=$(curl -s -o /dev/null -w "%{http_code}" http://${EC2_HOST} 2>/dev/null || echo "000")
             
             if [ "$response" = "200" ] || [ "$response" = "301" ] || [ "$response" = "302" ]; then
               echo "✅ Deployment successful! App is responding with status: $response"
