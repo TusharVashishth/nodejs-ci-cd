@@ -31,6 +31,11 @@ app.get("/quotes", (req: Request, res: Response) => {
   return res.json({ quote: randomQuote });
 });
 
+app.get("/random-age", (req: Request, res: Response) => {
+  const randomAge = Math.floor(Math.random() * 100); // Random age between 0 and 99
+  return res.json({ message: `Your random age is ${randomAge}` });
+});
+
 app.listen(PORT, () => console.log(`Server is running on PORT ${PORT}`));
 
 
