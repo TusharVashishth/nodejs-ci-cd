@@ -85,10 +85,9 @@ jobs:
             fi
             
             # Stop PM2 process before update (important!)
-            if pm2 list | grep -q "express-app"; then
-              echo "Stopping PM2 process..."
-              pm2 stop express-app
-            fi
+            echo "Stopping PM2 process if running..."
+            pm2 stop express-app 2>/dev/null || echo "No PM2 process to stop"
+            pm2 delete express-app 2>/dev/null || echo "No PM2 process to delete"
             
             # Extract new version (this will overwrite existing files)
             echo "Extracting new deployment package..."
@@ -103,17 +102,17 @@ jobs:
             if [ ! -f .env ]; then
               echo "Creating default .env file..."
               echo "NODE_ENV=production" > .env
-              echo "PORT=3000" >> .env
+              echo "PORT=8000" >> .env
             fi
             
-            # Start/Restart PM2 process
-            if pm2 list | grep -q "express-app"; then
-              echo "Restarting PM2 process..."
-              pm2 restart ecosystem.config.cjs --update-env
-            else
-              echo "Starting new PM2 process..."
-              pm2 start ecosystem.config.cjs
-            fi
+            # Create logs directory
+            mkdir -p logs
+            
+            # Start fresh PM2 process
+            echo "Starting PM2 process..."
+            pm2 start ecosystem.config.cjs
+            pm2 startup
+            pm2 save --force
             
             # Save PM2 process list
             pm2 save
@@ -143,7 +142,7 @@ jobs:
           # Check if app responds (try multiple times)
           for i in {1..5}; do
             echo "Attempt $i of 5..."
-            response=$(curl -s -o /dev/null -w "%{http_code}" http://${EC2_HOST}:3000 2>/dev/null || echo "000")
+            response=$(curl -s -o /dev/null -w "%{http_code}" http://${EC2_HOST}:8000 2>/dev/null || echo "000")
             
             if [ "$response" = "200" ] || [ "$response" = "301" ] || [ "$response" = "302" ]; then
               echo "✅ Deployment successful! App is responding with status: $response"
