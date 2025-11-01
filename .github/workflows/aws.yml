@@ -98,19 +98,11 @@ jobs:
             # Fix ownership after extraction
             sudo chown -R $USER:$USER /var/www/express-app
             
-            echo "=== Deployment Package Contents ==="
-            ls -la /var/www/express-app/
-            echo ""
-            echo "=== Dist Directory Contents ==="
-            ls -la /var/www/express-app/dist/
-            echo ""
-            echo "=== First 20 lines of index.js ==="
-            head -20 /var/www/express-app/dist/index.js
             
             # Install production dependencies on the server
             echo ""
             echo "Installing production dependencies..."
-            npm ci --only=production
+            npm ci
             
             # Create .env file if needed (only on first deploy)
             if [ ! -f .env ]; then
@@ -123,7 +115,7 @@ jobs:
             mkdir -p logs
             
             # Zero-downtime reload with PM2
-            if pm2 list | grep -q "express-app"; then
+            if pm2 describe express-app > /dev/null 2>&1; then
               echo "Reloading PM2 app (zero-downtime)..."
               pm2 reload ecosystem.config.cjs --update-env
             else
@@ -157,8 +149,8 @@ jobs:
           sleep 10
 
           # Check if app responds via nginx (try multiple times)
-          for i in {1..5}; do
-            echo "Attempt $i of 5..."
+          for i in {1..2}; do
+            echo "Attempt $i of 2..."
             response=$(curl -s -o /dev/null -w "%{http_code}" http://${EC2_HOST} 2>/dev/null || echo "000")
             
             if [ "$response" = "200" ] || [ "$response" = "301" ] || [ "$response" = "302" ]; then
@@ -170,7 +162,7 @@ jobs:
             sleep 5
           done
 
-          echo "❌ Deployment verification failed after 5 attempts"
+          echo "❌ Deployment verification failed after 2 attempts"
           echo "Please check PM2 logs on the server"
           exit 1
 
@@ -190,6 +182,9 @@ jobs:
             ${EC2_USERNAME}@${EC2_HOST} << 'EOF'
             
             cd /var/www/express-app
+
+            # Fix ownership first (important!)
+            sudo chown -R $USER:$USER /var/www/express-app
             
             # Find latest backup
             latest_backup=$(ls -t backups/backup_*.tar.gz 2>/dev/null | head -1)
@@ -197,8 +192,8 @@ jobs:
             if [ -n "$latest_backup" ]; then
               echo "Found backup: $latest_backup"
               tar -xzf "$latest_backup" -C /var/www/express-app
-              npm ci --only=production
-              pm2 restart ecosystem.config.cjs
+              npm ci
+              pm2 reload ecosystem.config.cjs
               echo "✅ Rolled back to previous version"
             else
               echo "⚠️ No backup found, cannot rollback"

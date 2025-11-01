@@ -28,12 +28,12 @@ const quotes: string[] = [
 app.get("/quotes", (req: Request, res: Response) => {
   const randomIndex = Math.floor(Math.random() * quotes.length);
   const randomQuote = quotes[randomIndex];
-  return res.json({ quote: randomQuote });
+  return res.json({ status: "success", quote: randomQuote });
 });
 
 app.get("/random-age", (req: Request, res: Response) => {
   const randomAge = Math.floor(Math.random() * 100); // Random age between 0 and 99
-  return res.json({ message: `Your random age is ${randomAge}` });
+  return res.json({ status: "success", message: `Your random age is ${randomAge}` });
 });
 
 app.listen(PORT, () => console.log(`Server is running on PORT ${PORT}`));
